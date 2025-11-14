@@ -1,0 +1,15 @@
+# CoLink Common Database Module Dependencies
+
+# PostgreSQL
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# MongoDB
+pymongo>=4.6.0
+
+# Redis
+redis[hiredis]>=5.0.1
+
+# Connection pooling
+greenlet>=3.0.0
