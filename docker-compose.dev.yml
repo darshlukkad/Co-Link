@@ -1,0 +1,290 @@
+version: '3.9'
+
+services:
+  # PostgreSQL - Primary database for users, channels, messages
+  postgres:
+    image: postgres:15-alpine
+    container_name: colink-postgres
+    environment:
+      POSTGRES_DB: colink
+      POSTGRES_USER: colink
+      POSTGRES_PASSWORD: colink_dev_password
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - colink-network
+
+  # MongoDB - File metadata and audit logs
+  mongodb:
+    image: mongo:6
+    container_name: colink-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: colink
+      MONGO_INITDB_ROOT_PASSWORD: colink_dev_password
+      MONGO_INITDB_DATABASE: colink
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./infra/docker/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/colink --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - colink-network
+
+  # Redis - Caching, sessions, presence, pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: colink-redis
+    command: redis-server --requirepass colink_dev_password --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "colink_dev_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - colink-network
+
+  # Kafka & Zookeeper - Event streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: colink-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - colink-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: colink-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - colink-network
+
+  # Keycloak - SSO and Identity Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: colink-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: colink
+      KC_DB_PASSWORD: colink_dev_password
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8080
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - keycloak_data:/opt/keycloak/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: 127.0.0.1\r\nConnection: close\r\n\r\n' >&3;grep 'HTTP/1.1 200 OK' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - colink-network
+
+  # LocalStack - AWS services emulation for development
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: colink-localstack
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: us-east-1
+      EDGE_PORT: 4566
+      DEBUG: 1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./infra/docker/localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
+    networks:
+      - colink-network
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: colink-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - colink-network
+
+  # Grafana - Dashboards and visualization
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: colink-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./ops/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./ops/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - colink-network
+
+  # Loki - Log aggregation (optional)
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: colink-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - colink-network
+
+  # MailHog - Email testing
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: colink-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - colink-network
+
+  # Adminer - Database management UI (optional)
+  adminer:
+    image: adminer:4.8.1
+    container_name: colink-adminer
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - colink-network
+
+  # Mongo Express - MongoDB management UI (optional)
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: colink-mongo-express
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: colink
+      ME_CONFIG_MONGODB_ADMINPASSWORD: colink_dev_password
+      ME_CONFIG_MONGODB_URL: mongodb://colink:colink_dev_password@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      - mongodb
+    networks:
+      - colink-network
+
+  # Redis Commander - Redis management UI (optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: colink-redis-commander
+    ports:
+      - "8083:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:colink_dev_password
+    depends_on:
+      - redis
+    networks:
+      - colink-network
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  keycloak_data:
+    driver: local
+  localstack_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+networks:
+  colink-network:
+    driver: bridge
+    name: colink-network

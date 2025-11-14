@@ -1,0 +1,20 @@
+# CoLink Development Environment Tool Versions
+# Use with asdf (https://asdf-vm.com) or mise (https://mise.jdx.dev)
+
+# Python - Backend services
+python 3.11.7
+
+# Node.js - Frontend and tooling
+nodejs 20.11.0
+
+# Terraform - Infrastructure as Code
+terraform 1.6.6
+
+# kubectl - Kubernetes CLI
+kubectl 1.28.4
+
+# Helm - Kubernetes package manager (optional)
+# helm 3.13.3
+
+# PostgreSQL client (optional, for local testing)
+# postgres 15.5

@@ -1,0 +1,91 @@
+# Prometheus Configuration for CoLink
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'colink-dev'
+    environment: 'development'
+
+# Alerting configuration (placeholder)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # CoLink Services
+  - job_name: 'colink-gateway'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-users'
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-messaging'
+    static_configs:
+      - targets: ['host.docker.internal:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-files'
+    static_configs:
+      - targets: ['host.docker.internal:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-search'
+    static_configs:
+      - targets: ['host.docker.internal:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-admin'
+    static_configs:
+      - targets: ['host.docker.internal:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-channels'
+    static_configs:
+      - targets: ['host.docker.internal:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'colink-presence'
+    static_configs:
+      - targets: ['host.docker.internal:8007']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Infrastructure services
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9092']
+    scrape_interval: 30s
