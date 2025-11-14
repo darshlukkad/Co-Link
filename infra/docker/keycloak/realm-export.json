@@ -40,12 +40,21 @@
   "defaultRoles": ["user"],
   "requiredCredentials": ["password"],
   "otpPolicyType": "totp",
-  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyAlgorithm": "HmacSHA256",
   "otpPolicyInitialCounter": 0,
   "otpPolicyDigits": 6,
   "otpPolicyLookAheadWindow": 1,
   "otpPolicyPeriod": 30,
-  "otpSupportedApplications": ["totpAppGoogleName", "totpAppFreeOTPName"],
+  "otpSupportedApplications": ["totpAppGoogleName", "totpAppFreeOTPName", "totpAppMicrosoftAuthenticatorName"],
+  "defaultRequiredActions": ["CONFIGURE_TOTP", "UPDATE_PASSWORD"],
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
   "clients": [
     {
       "clientId": "colink-web",
@@ -54,17 +63,31 @@
       "publicClient": true,
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "https://colink.example.com/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://colink.example.com"
       ],
+      "baseUrl": "http://localhost:5173",
+      "rootUrl": "http://localhost:5173",
+      "adminUrl": "",
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      }
     },
     {
       "clientId": "colink-api",
@@ -72,11 +95,26 @@
       "enabled": true,
       "publicClient": false,
       "secret": "colink-api-secret-dev-only",
-      "redirectUris": ["http://localhost:8000/*"],
+      "redirectUris": [
+        "http://localhost:8000/*",
+        "https://api.colink.example.com/*"
+      ],
+      "webOrigins": ["+"],
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": true,
-      "authorizationServicesEnabled": true
+      "authorizationServicesEnabled": true,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
+      "attributes": {
+        "access.token.lifespan": "3600",
+        "use.refresh.tokens": "true"
+      }
     }
   ],
   "identityProviders": [
