@@ -1,0 +1,477 @@
+openapi: 3.1.0
+info:
+  title: CoLink Users Service API
+  version: 0.1.0
+  description: |
+    User profiles, status management, and user-related operations.
+
+    ## Features
+    - User profile CRUD
+    - Custom status with emoji
+    - User preferences
+    - User search
+  contact:
+    name: CoLink Team
+    email: support@colink.example.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8001
+    description: Development server
+  - url: https://api.colink.example.com/users
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Profile
+    description: User profile operations
+  - name: Status
+    description: User status management
+  - name: Search
+    description: User search operations
+  - name: Health
+    description: Service health endpoints
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /users/me:
+    get:
+      summary: Get current user profile
+      tags: [Profile]
+      description: Get the profile of the currently authenticated user
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              example:
+                user_id: "8c3f4d5e-1234-5678-90ab-cdef12345678"
+                username: "alice"
+                email: "alice@example.com"
+                display_name: "Alice Smith"
+                avatar_url: "https://example.com/avatars/alice.jpg"
+                bio: "Product Manager at CoLink"
+                timezone: "America/New_York"
+                created_at: "2024-01-15T10:30:00Z"
+                updated_at: "2024-01-20T14:45:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      summary: Update current user profile
+      tags: [Profile]
+      description: Update the profile of the currently authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            example:
+              display_name: "Alice Smith"
+              avatar_url: "https://example.com/avatars/new-alice.jpg"
+              bio: "Senior Product Manager at CoLink"
+              timezone: "America/Los_Angeles"
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/{user_id}:
+    get:
+      summary: Get user by ID
+      tags: [Profile]
+      description: Get another user's public profile
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/me/status:
+    post:
+      summary: Set user status
+      tags: [Status]
+      description: Set custom status text and emoji
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetStatusRequest'
+            example:
+              status_text: "In a meeting"
+              status_emoji: "📅"
+              expiry_minutes: 60
+      responses:
+        '200':
+          description: Status set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      summary: Clear user status
+      tags: [Status]
+      description: Remove custom status
+      responses:
+        '204':
+          description: Status cleared
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/search:
+    get:
+      summary: Search users
+      tags: [Search]
+      description: Search for users by name or email
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 2
+          example: "alice"
+        - name: limit
+          in: query
+          description: Maximum results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Keycloak
+
+  parameters:
+    UserIdPath:
+      name: user_id
+      in: path
+      required: true
+      description: User ID (UUID)
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    UserProfile:
+      type: object
+      required:
+        - user_id
+        - username
+        - email
+        - created_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Username
+        email:
+          type: string
+          format: email
+          description: Email address
+        display_name:
+          type: string
+          maxLength: 100
+          description: Display name
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          description: Avatar image URL
+          nullable: true
+        bio:
+          type: string
+          maxLength: 500
+          description: User bio
+          nullable: true
+        timezone:
+          type: string
+          description: User timezone (IANA format)
+          nullable: true
+          example: "America/New_York"
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          nullable: true
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          maxLength: 100
+        avatar_url:
+          type: string
+          format: uri
+        bio:
+          type: string
+          maxLength: 500
+        timezone:
+          type: string
+          example: "America/New_York"
+
+    UserStatus:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        status_text:
+          type: string
+          maxLength: 100
+          nullable: true
+        status_emoji:
+          type: string
+          maxLength: 10
+          nullable: true
+        status_expiry:
+          type: string
+          format: date-time
+          nullable: true
+          description: When status expires
+        updated_at:
+          type: string
+          format: date-time
+
+    SetStatusRequest:
+      type: object
+      properties:
+        status_text:
+          type: string
+          maxLength: 100
+          description: Status text
+        status_emoji:
+          type: string
+          maxLength: 10
+          description: Status emoji
+        expiry_minutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+          description: Minutes until status expires (max 24 hours)
+          nullable: true
+
+    UserSearchResponse:
+      type: object
+      required:
+        - users
+        - total
+        - limit
+        - offset
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+        total:
+          type: integer
+          description: Total number of matching users
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        service:
+          type: string
+          example: "users"
+
+    ReadyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ready"
+        service:
+          type: string
+          example: "users"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - status_code
+      properties:
+        error:
+          type: string
+          description: Error message
+        status_code:
+          type: integer
+          description: HTTP status code
+        details:
+          type: object
+          description: Additional error details
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Validation error"
+            status_code: 400
+            details:
+              field: "email"
+              message: "Invalid email format"
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Missing authentication token"
+            status_code: 401
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Insufficient permissions"
+            status_code: 403
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "User not found"
+            status_code: 404
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Internal server error"
+            status_code: 500

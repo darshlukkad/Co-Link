@@ -1,0 +1,345 @@
+openapi: 3.1.0
+info:
+  title: CoLink Channels Service API
+  version: 0.1.0
+  description: Channel and DM management with membership control
+
+servers:
+  - url: http://localhost:8006
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Channels
+  - name: Members
+  - name: DMs
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /channels:
+    post:
+      summary: Create channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+                description:
+                  type: string
+                  maxLength: 250
+                is_private:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+
+    get:
+      summary: List channels
+      tags: [Channels]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Channels list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+                  total:
+                    type: integer
+
+  /channels/{channel_id}:
+    get:
+      summary: Get channel
+      tags: [Channels]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '200':
+          description: Channel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+
+    put:
+      summary: Update channel
+      tags: [Channels]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+                description:
+                  type: string
+                  maxLength: 250
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+
+    delete:
+      summary: Archive channel
+      tags: [Channels]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '204':
+          description: Archived
+        '403':
+          $ref: '#/components/responses/Error'
+
+  /channels/{channel_id}/members:
+    post:
+      summary: Add member
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                role:
+                  type: string
+                  enum: [member, admin]
+                  default: member
+      responses:
+        '200':
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+
+    get:
+      summary: List members
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '200':
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+
+  /channels/{channel_id}/members/{user_id}:
+    delete:
+      summary: Remove member
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Removed
+        '403':
+          $ref: '#/components/responses/Error'
+
+  /dms:
+    post:
+      summary: Create DM session
+      tags: [DMs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participant_ids]
+              properties:
+                participant_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 1
+      responses:
+        '201':
+          description: DM created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectMessage'
+
+    get:
+      summary: List DMs
+      tags: [DMs]
+      responses:
+        '200':
+          description: DMs list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dms:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirectMessage'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ChannelId:
+      name: channel_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Channel:
+      type: object
+      properties:
+        channel_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        is_private:
+          type: boolean
+        member_count:
+          type: integer
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    Member:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+        joined_at:
+          type: string
+          format: date-time
+
+    DirectMessage:
+      type: object
+      properties:
+        dm_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              status_code:
+                type: integer

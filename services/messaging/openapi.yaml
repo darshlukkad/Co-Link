@@ -1,0 +1,657 @@
+openapi: 3.1.0
+info:
+  title: CoLink Messaging Service API
+  version: 0.1.0
+  description: |
+    Core messaging functionality including messages, threads, and reactions.
+
+    ## Features
+    - Send, edit, delete messages
+    - Threaded conversations
+    - Emoji reactions
+    - Message history with pagination
+    - Kafka event publishing
+  contact:
+    name: CoLink Team
+    email: support@colink.example.com
+
+servers:
+  - url: http://localhost:8002
+    description: Development server
+  - url: https://api.colink.example.com/messaging
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Messages
+    description: Message operations
+  - name: Threads
+    description: Threaded conversations
+  - name: Reactions
+    description: Emoji reactions
+  - name: Health
+    description: Service health endpoints
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+
+  /channels/{channel_id}/messages:
+    post:
+      summary: Send message
+      tags: [Messages]
+      description: Send a new message to a channel
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+            example:
+              content: "Hello team! Ready for standup?"
+              mentions: ["user-id-1", "user-id-2"]
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: Get messages
+      tags: [Messages]
+      description: Get paginated list of messages in a channel
+      parameters:
+        - $ref: '#/components/parameters/ChannelIdPath'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Before'
+        - $ref: '#/components/parameters/After'
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /messages/{message_id}:
+    get:
+      summary: Get message by ID
+      tags: [Messages]
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      responses:
+        '200':
+          description: Message found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      summary: Edit message
+      tags: [Messages]
+      description: Edit an existing message (author only)
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMessageRequest'
+            example:
+              content: "Hello team! Ready for standup? (updated)"
+      responses:
+        '200':
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      summary: Delete message
+      tags: [Messages]
+      description: Soft delete a message (author only or admin)
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      responses:
+        '204':
+          description: Message deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /messages/{message_id}/threads:
+    post:
+      summary: Create thread reply
+      tags: [Threads]
+      description: Reply to a message in a thread
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateThreadReplyRequest'
+            example:
+              content: "I'll be there in 5 minutes!"
+      responses:
+        '201':
+          description: Thread reply created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: Get thread replies
+      tags: [Threads]
+      description: Get all replies in a thread
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/After'
+      responses:
+        '200':
+          description: Thread replies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadRepliesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /messages/{message_id}/reactions:
+    post:
+      summary: Add reaction
+      tags: [Reactions]
+      description: Add emoji reaction to a message
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddReactionRequest'
+            example:
+              emoji: "👍"
+      responses:
+        '201':
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Reaction already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: Get reactions
+      tags: [Reactions]
+      description: Get all reactions for a message
+      parameters:
+        - $ref: '#/components/parameters/MessageIdPath'
+      responses:
+        '200':
+          description: Reactions list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReactionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /reactions/{reaction_id}:
+    delete:
+      summary: Remove reaction
+      tags: [Reactions]
+      description: Remove own reaction from a message
+      parameters:
+        - name: reaction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Reaction removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ChannelIdPath:
+      name: channel_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    MessageIdPath:
+      name: message_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    Limit:
+      name: limit
+      in: query
+      description: Maximum results
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+
+    Before:
+      name: before
+      in: query
+      description: Get messages before this message ID
+      schema:
+        type: string
+        format: uuid
+
+    After:
+      name: after
+      in: query
+      description: Get messages after this message ID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Message:
+      type: object
+      required:
+        - message_id
+        - channel_id
+        - user_id
+        - content
+        - created_at
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+          nullable: true
+        dm_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        content:
+          type: string
+          maxLength: 4000
+        mentions:
+          type: array
+          items:
+            type: string
+            format: uuid
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uuid
+        thread_id:
+          type: string
+          format: uuid
+          nullable: true
+        thread_reply_count:
+          type: integer
+          nullable: true
+        reactions_summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReactionSummary'
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateMessageRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        mentions:
+          type: array
+          items:
+            type: string
+            format: uuid
+        attachments:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateMessageRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+
+    MessagesResponse:
+      type: object
+      required:
+        - messages
+        - has_more
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        has_more:
+          type: boolean
+        before_cursor:
+          type: string
+          format: uuid
+          nullable: true
+        after_cursor:
+          type: string
+          format: uuid
+          nullable: true
+
+    ThreadMessage:
+      type: object
+      required:
+        - thread_message_id
+        - parent_message_id
+        - user_id
+        - content
+        - created_at
+      properties:
+        thread_message_id:
+          type: string
+          format: uuid
+        parent_message_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        content:
+          type: string
+          maxLength: 4000
+        reactions_summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReactionSummary'
+        created_at:
+          type: string
+          format: date-time
+
+    CreateThreadReplyRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+
+    ThreadRepliesResponse:
+      type: object
+      required:
+        - replies
+        - total
+      properties:
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreadMessage'
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    Reaction:
+      type: object
+      required:
+        - reaction_id
+        - message_id
+        - user_id
+        - emoji
+        - created_at
+      properties:
+        reaction_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        emoji:
+          type: string
+          maxLength: 10
+        created_at:
+          type: string
+          format: date-time
+
+    AddReactionRequest:
+      type: object
+      required:
+        - emoji
+      properties:
+        emoji:
+          type: string
+          minLength: 1
+          maxLength: 10
+
+    ReactionSummary:
+      type: object
+      required:
+        - emoji
+        - count
+        - user_reacted
+      properties:
+        emoji:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        user_reacted:
+          type: boolean
+          description: Whether current user reacted with this emoji
+
+    ReactionsResponse:
+      type: object
+      required:
+        - reactions
+      properties:
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reaction'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - status_code
+      properties:
+        error:
+          type: string
+        status_code:
+          type: integer
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

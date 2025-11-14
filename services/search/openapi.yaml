@@ -1,0 +1,220 @@
+openapi: 3.1.0
+info:
+  title: CoLink Search Service API
+  version: 0.1.0
+  description: Full-text search for messages and files
+
+servers:
+  - url: http://localhost:8004
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Search
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+
+  /search/messages:
+    get:
+      summary: Search messages
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 2
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageSearchResult'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /search/files:
+    get:
+      summary: Search files
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: content_type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FileSearchResult'
+                  total:
+                    type: integer
+
+  /search:
+    get:
+      summary: Unified search (messages + files)
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Combined results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageSearchResult'
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FileSearchResult'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    MessageSearchResult:
+      type: object
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        content:
+          type: string
+        content_snippet:
+          type: string
+          description: Highlighted snippet
+        created_at:
+          type: string
+          format: date-time
+        relevance_score:
+          type: number
+
+    FileSearchResult:
+      type: object
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        uploader_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time

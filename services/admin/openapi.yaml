@@ -1,0 +1,233 @@
+openapi: 3.1.0
+info:
+  title: CoLink Admin Service API
+  version: 0.1.0
+  description: Administration and moderation (admin role required)
+
+servers:
+  - url: http://localhost:8005
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Users
+  - name: Moderation
+  - name: Audit
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+
+  /admin/users:
+    get:
+      summary: List users
+      tags: [Users]
+      description: Requires admin role
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUserView'
+                  total:
+                    type: integer
+        '403':
+          description: Forbidden
+
+  /admin/users/{user_id}/suspend:
+    post:
+      summary: Suspend user
+      tags: [Users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                duration_hours:
+                  type: integer
+                  nullable: true
+      responses:
+        '200':
+          description: Suspended
+        '403':
+          description: Forbidden
+
+  /admin/users/{user_id}/activate:
+    post:
+      summary: Activate user
+      tags: [Users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Activated
+        '403':
+          description: Forbidden
+
+  /admin/messages/{message_id}:
+    delete:
+      summary: Delete message (moderation)
+      tags: [Moderation]
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Forbidden
+
+  /admin/audit-log:
+    get:
+      summary: Get audit log
+      tags: [Audit]
+      parameters:
+        - name: action_type
+          in: query
+          schema:
+            type: string
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Audit log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  total:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    AdminUserView:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        is_suspended:
+          type: boolean
+        suspend_until:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+
+    AuditLogEntry:
+      type: object
+      properties:
+        audit_id:
+          type: string
+          format: uuid
+        action_type:
+          type: string
+        actor_id:
+          type: string
+          format: uuid
+        actor_username:
+          type: string
+        target_id:
+          type: string
+          format: uuid
+          nullable: true
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

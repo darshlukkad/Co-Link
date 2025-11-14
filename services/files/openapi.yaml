@@ -1,0 +1,194 @@
+openapi: 3.1.0
+info:
+  title: CoLink Files Service API
+  version: 0.1.0
+  description: File upload/download with S3 presigned URLs
+
+servers:
+  - url: http://localhost:8003
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Files
+  - name: Health
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+
+  /files/upload-url:
+    post:
+      summary: Get presigned upload URL
+      tags: [Files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, content_type, size_bytes]
+              properties:
+                filename:
+                  type: string
+                  maxLength: 255
+                content_type:
+                  type: string
+                  example: "image/png"
+                size_bytes:
+                  type: integer
+                  maximum: 104857600
+                channel_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                dm_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file_id:
+                    type: string
+                    format: uuid
+                  upload_url:
+                    type: string
+                    format: uri
+                  expires_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid file
+        '413':
+          description: File too large
+
+  /files/{file_id}/confirm:
+    post:
+      summary: Confirm upload complete
+      tags: [Files]
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Upload confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadata'
+
+  /files/{file_id}/download-url:
+    get:
+      summary: Get presigned download URL
+      tags: [Files]
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+                    format: uri
+                  expires_at:
+                    type: string
+                    format: date-time
+        '403':
+          description: Infected file
+        '404':
+          description: Not found
+
+  /files/{file_id}:
+    get:
+      summary: Get file metadata
+      tags: [Files]
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadata'
+
+    delete:
+      summary: Delete file
+      tags: [Files]
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    FileMetadata:
+      type: object
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        channel_id:
+          type: string
+          format: uuid
+          nullable: true
+        uploader_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        virus_scan_status:
+          type: string
+          enum: [pending, clean, infected]
+        created_at:
+          type: string
+          format: date-time
