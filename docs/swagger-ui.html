@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoLink API Documentation</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #3f0e40 0%, #007a5a 100%);
+      color: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .header p {
+      margin: 8px 0 0 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .service-selector {
+      background: #f5f5f5;
+      padding: 16px 40px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .service-selector label {
+      font-weight: 600;
+      color: #333;
+      margin-right: 8px;
+    }
+
+    .service-btn {
+      padding: 8px 16px;
+      border: 2px solid #007a5a;
+      background: white;
+      color: #007a5a;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .service-btn:hover {
+      background: #007a5a;
+      color: white;
+    }
+
+    .service-btn.active {
+      background: #007a5a;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,122,90,0.3);
+    }
+
+    #swagger-ui {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .swagger-ui .topbar {
+      display: none;
+    }
+
+    .info-section {
+      background: #f9f9f9;
+      border-left: 4px solid #007a5a;
+      padding: 20px;
+      margin: 20px 40px;
+      border-radius: 4px;
+    }
+
+    .info-section h3 {
+      margin-top: 0;
+      color: #3f0e40;
+    }
+
+    .info-section code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+      border: 1px solid #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚀 CoLink API Documentation</h1>
+    <p>Complete API reference for all CoLink microservices</p>
+  </div>
+
+  <div class="info-section">
+    <h3>🔐 Authentication Required</h3>
+    <p>Most endpoints require JWT authentication. Click the <strong>"Authorize"</strong> button in Swagger UI and enter your token in format: <code>Bearer your_token_here</code></p>
+    <p>Get a token from Keycloak: <code>POST /realms/colink/protocol/openid-connect/token</code></p>
+  </div>
+
+  <div class="service-selector">
+    <label>Select Service:</label>
+    <button class="service-btn active" onclick="loadSpec('all')">All Services</button>
+    <button class="service-btn" onclick="loadSpec('users')">Users (8001)</button>
+    <button class="service-btn" onclick="loadSpec('messaging')">Messaging (8002)</button>
+    <button class="service-btn" onclick="loadSpec('files')">Files (8003)</button>
+    <button class="service-btn" onclick="loadSpec('search')">Search (8004)</button>
+    <button class="service-btn" onclick="loadSpec('admin')">Admin (8005)</button>
+    <button class="service-btn" onclick="loadSpec('channels')">Channels (8006)</button>
+    <button class="service-btn" onclick="loadSpec('presence')">Presence (8008)</button>
+  </div>
+
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    const serviceSpecs = {
+      users: '../services/users/openapi.yaml',
+      messaging: '../services/messaging/openapi.yaml',
+      files: '../services/files/openapi.yaml',
+      search: '../services/search/openapi.yaml',
+      admin: '../services/admin/openapi.yaml',
+      channels: '../services/channels/openapi.yaml',
+      presence: 'http://localhost:8008/openapi.json',
+      all: createCombinedSpec()
+    }
+
+    let currentUI = null
+
+    function createCombinedSpec() {
+      return {
+        openapi: '3.0.3',
+        info: {
+          title: 'CoLink API - All Services',
+          version: '1.0.0',
+          description: `
+# CoLink Complete API Reference
+
+This documentation covers all CoLink microservices. Use the buttons above to view individual service documentation.
+
+## Services
+
+- **Users Service** (8001): User management, profiles, authentication
+- **Messaging Service** (8002): Messages, threads, reactions
+- **Files Service** (8003): File uploads, S3 storage
+- **Search Service** (8004): Full-text search
+- **Admin Service** (8005): User moderation, admin tools
+- **Channels Service** (8006): Channels, DMs, memberships
+- **Presence Service** (8008): Online status, typing indicators
+
+## Quick Links
+
+- [Full API Documentation](./API_DOCUMENTATION.md)
+- [Development Guide](../DEVELOPMENT.md)
+- [WebSocket Events](./WEBSOCKET_EVENTS.md)
+
+## Authentication
+
+All services use JWT authentication via Keycloak:
+
+\`\`\`bash
+# Get token
+curl -X POST http://localhost:8080/realms/colink/protocol/openid-connect/token \\
+  -d "grant_type=password" \\
+  -d "client_id=colink-backend" \\
+  -d "username=user@example.com" \\
+  -d "password=password"
+\`\`\`
+
+Use the token in requests:
+\`\`\`bash
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8001/users/me
+\`\`\`
+          `,
+          contact: {
+            name: 'CoLink Support',
+            url: 'https://github.com/darshlukkad/Co-Link'
+          }
+        },
+        servers: [
+          {
+            url: 'http://localhost:8000',
+            description: 'API Gateway (Development)'
+          },
+          {
+            url: 'http://localhost:8001',
+            description: 'Users Service'
+          },
+          {
+            url: 'http://localhost:8002',
+            description: 'Messaging Service'
+          },
+          {
+            url: 'http://localhost:8003',
+            description: 'Files Service'
+          },
+          {
+            url: 'http://localhost:8004',
+            description: 'Search Service'
+          },
+          {
+            url: 'http://localhost:8005',
+            description: 'Admin Service'
+          },
+          {
+            url: 'http://localhost:8006',
+            description: 'Channels Service'
+          }
+        ],
+        tags: [
+          { name: 'Users', description: 'User management operations' },
+          { name: 'Messages', description: 'Messaging operations' },
+          { name: 'Files', description: 'File management' },
+          { name: 'Search', description: 'Search operations' },
+          { name: 'Admin', description: 'Administrative operations' },
+          { name: 'Channels', description: 'Channel and DM operations' },
+          { name: 'Presence', description: 'Online status and typing' }
+        ],
+        paths: {},
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+              description: 'Enter your JWT token from Keycloak'
+            }
+          }
+        },
+        security: [{ bearerAuth: [] }]
+      }
+    }
+
+    function loadSpec(service) {
+      // Update active button
+      document.querySelectorAll('.service-btn').forEach(btn => {
+        btn.classList.remove('active')
+      })
+      event.target.classList.add('active')
+
+      // Dispose existing UI
+      if (currentUI) {
+        currentUI = null
+      }
+
+      const spec = serviceSpecs[service]
+      const isUrl = typeof spec === 'string'
+
+      currentUI = SwaggerUIBundle({
+        [isUrl ? 'url' : 'spec']: spec,
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        filter: true,
+        tryItOutEnabled: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+        docExpansion: 'list',
+        syntaxHighlight: {
+          activated: true,
+          theme: 'monokai'
+        }
+      })
+    }
+
+    // Load default spec on page load
+    window.addEventListener('load', () => {
+      loadSpec('all')
+    })
+  </script>
+</body>
+</html>
