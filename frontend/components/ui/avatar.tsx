@@ -25,16 +25,16 @@ const statusClasses = {
 
 export function Avatar({ src, name, userId, size = 'md', status, className }: AvatarProps) {
   const initials = getInitials(name)
-  const colorClass = getAvatarColor(userId)
+  const backgroundColor = getAvatarColor(userId)
 
   return (
     <div className={cn('relative inline-block', className)}>
       <div
         className={cn(
           'flex items-center justify-center rounded font-semibold text-white',
-          sizeClasses[size],
-          !src && colorClass
+          sizeClasses[size]
         )}
+        style={!src ? { backgroundColor } : undefined}
       >
         {src ? (
           <img src={src} alt={name} className="h-full w-full rounded object-cover" />
