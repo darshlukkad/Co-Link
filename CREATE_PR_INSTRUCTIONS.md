@@ -2,7 +2,7 @@
 
 ## 🎯 Goal
 
-Create a Pull Request to merge all your work into the main branch and trigger CI/CD workflows.
+Create a Pull Request to merge all your work into the master branch and trigger CI/CD workflows.
 
 ---
 
@@ -365,4 +365,4 @@ After creating the PR:
 
 *Good luck! 🚀*
 
-*All your hard work is about to be merged into main!*
+*All your hard work is about to be merged into master!*
