@@ -260,6 +260,55 @@ services:
     networks:
       - colink-network
 
+  # ============================================================================
+  # CoLink Backend Services
+  # ============================================================================
+
+  # Presence Service - WebSocket gateway for real-time features
+  presence:
+    build:
+      context: ./services/presence
+      dockerfile: Dockerfile
+    container_name: colink-presence
+    ports:
+      - "8006:8006"
+    environment:
+      # Service config
+      SERVICE_NAME: presence
+      SERVICE_PORT: 8006
+      LOG_LEVEL: INFO
+
+      # Redis
+      REDIS_URL: redis://:colink_dev_password@redis:6379/0
+
+      # Keycloak
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: colink
+      KEYCLOAK_CLIENT_ID: colink-api
+      KEYCLOAK_CLIENT_SECRET: colink-api-secret-dev-only
+
+      # WebSocket config
+      WS_HEARTBEAT_INTERVAL: 30
+      WS_PRESENCE_TTL: 300
+      WS_TYPING_TTL: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8006/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - colink-network
+    volumes:
+      - ./services/presence:/app
+      - ./services/common:/app/common
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+
 volumes:
   postgres_data:
     driver: local
