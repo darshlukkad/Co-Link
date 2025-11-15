@@ -134,7 +134,7 @@ jobs:
 
       - name: Validate OpenAPI specs
         run: |
-          for spec in docs/api/*.yaml; do
+          for spec in services/*/openapi.yaml; do
             echo "Validating $spec"
             lint-openapi "$spec"
           done
