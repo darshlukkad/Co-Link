@@ -1,0 +1,351 @@
+### CoLink API Testing with REST Client (VS Code Extension)
+### Set variables
+@baseUrl = http://localhost:8000
+@usersService = http://localhost:8001
+@messagingService = http://localhost:8002
+@filesService = http://localhost:8003
+@searchService = http://localhost:8004
+@adminService = http://localhost:8005
+@channelsService = http://localhost:8006
+@gatewayService = http://localhost:8007
+@presenceService = http://localhost:8008
+@keycloakUrl = http://localhost:8080
+@workspaceId = 550e8400-e29b-41d4-a716-446655440000
+
+### Authentication - Get Access Token
+# @name getToken
+POST {{keycloakUrl}}/realms/colink/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password
+&username=testuser@colink.io
+&password=password123
+&client_id=colink-api
+&client_secret=colink-api-secret
+
+### Extract token
+@accessToken = {{getToken.response.body.access_token}}
+
+################################################################################
+# USERS SERVICE
+################################################################################
+
+### Health Check
+GET {{usersService}}/health
+
+### Create User
+# @name createUser
+POST {{usersService}}/users
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "newuser@colink.io",
+  "username": "newuser",
+  "display_name": "New User",
+  "password": "SecurePass123!"
+}
+
+### Extract user ID
+@userId = {{createUser.response.body.user_id}}
+
+### Get User Profile
+GET {{usersService}}/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+### Update User Profile
+PUT {{usersService}}/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "display_name": "Updated Name",
+  "bio": "Software engineer passionate about distributed systems",
+  "timezone": "America/New_York"
+}
+
+### List Users
+GET {{usersService}}/users?limit=20&offset=0
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+# CHANNELS SERVICE
+################################################################################
+
+### Create Channel
+# @name createChannel
+POST {{channelsService}}/channels
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "workspace_id": "{{workspaceId}}",
+  "name": "general",
+  "description": "General discussion channel",
+  "is_private": false
+}
+
+### Extract channel ID
+@channelId = {{createChannel.response.body.channel_id}}
+
+### List Channels
+GET {{channelsService}}/channels?workspace_id={{workspaceId}}
+Authorization: Bearer {{accessToken}}
+
+### Get Channel Details
+GET {{channelsService}}/channels/{{channelId}}
+Authorization: Bearer {{accessToken}}
+
+### Update Channel
+PUT {{channelsService}}/channels/{{channelId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "general-chat",
+  "description": "Updated description",
+  "topic": "General discussions"
+}
+
+### Add Member to Channel
+POST {{channelsService}}/channels/{{channelId}}/members
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "user_id": "{{userId}}",
+  "role": "member"
+}
+
+### List Channel Members
+GET {{channelsService}}/channels/{{channelId}}/members
+Authorization: Bearer {{accessToken}}
+
+### Create Direct Message
+# @name createDM
+POST {{channelsService}}/dms
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "workspace_id": "{{workspaceId}}",
+  "participant_user_ids": ["user-id-1", "user-id-2"]
+}
+
+################################################################################
+# MESSAGING SERVICE
+################################################################################
+
+### Send Message
+# @name sendMessage
+POST {{messagingService}}/channels/{{channelId}}/messages
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Hello, this is a test message! 👋",
+  "message_type": "text"
+}
+
+### Extract message ID
+@messageId = {{sendMessage.response.body.message_id}}
+
+### Get Channel Messages
+GET {{messagingService}}/channels/{{channelId}}/messages?limit=50&offset=0
+Authorization: Bearer {{accessToken}}
+
+### Get Single Message
+GET {{messagingService}}/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+
+### Update Message
+PUT {{messagingService}}/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Updated message content"
+}
+
+### Delete Message (Soft Delete)
+DELETE {{messagingService}}/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+
+### Add Reaction to Message
+# @name addReaction
+POST {{messagingService}}/messages/{{messageId}}/reactions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "emoji": "👍"
+}
+
+### Get Message Reactions
+GET {{messagingService}}/messages/{{messageId}}/reactions
+Authorization: Bearer {{accessToken}}
+
+### Create Thread Reply
+# @name createThread
+POST {{messagingService}}/messages/{{messageId}}/threads
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "This is a threaded reply to the message"
+}
+
+### Get Thread Replies
+GET {{messagingService}}/messages/{{messageId}}/threads?limit=20
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+# FILES SERVICE
+################################################################################
+
+### Get Upload URL
+# @name getUploadUrl
+POST {{filesService}}/files/upload-url
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "filename": "document.pdf",
+  "content_type": "application/pdf",
+  "size_bytes": 1024000,
+  "workspace_id": "{{workspaceId}}"
+}
+
+### Extract file ID
+@fileId = {{getUploadUrl.response.body.file_id}}
+@uploadUrl = {{getUploadUrl.response.body.upload_url}}
+
+### Confirm File Upload
+POST {{filesService}}/files/{{fileId}}/confirm
+Authorization: Bearer {{accessToken}}
+
+### Get File Metadata
+GET {{filesService}}/files/{{fileId}}
+Authorization: Bearer {{accessToken}}
+
+### Get Download URL
+GET {{filesService}}/files/{{fileId}}/download-url
+Authorization: Bearer {{accessToken}}
+
+### Delete File
+DELETE {{filesService}}/files/{{fileId}}
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+# SEARCH SERVICE
+################################################################################
+
+### Search Messages
+GET {{searchService}}/search/messages?query=test&workspace_id={{workspaceId}}&limit=20&offset=0
+Authorization: Bearer {{accessToken}}
+
+### Search Messages in Channel
+GET {{searchService}}/search/messages?query=hello&channel_id={{channelId}}&limit=10
+Authorization: Bearer {{accessToken}}
+
+### Search Files
+GET {{searchService}}/search/files?query=document&workspace_id={{workspaceId}}&limit=20
+Authorization: Bearer {{accessToken}}
+
+### Unified Search (Messages + Files)
+GET {{searchService}}/search?query=test&workspace_id={{workspaceId}}&limit=30
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+# ADMIN SERVICE
+################################################################################
+
+### List All Users (Admin)
+GET {{adminService}}/admin/users?limit=50&offset=0
+Authorization: Bearer {{accessToken}}
+
+### Suspend User
+POST {{adminService}}/admin/users/{{userId}}/suspend
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Violation of community guidelines",
+  "duration_hours": 24
+}
+
+### Activate User
+POST {{adminService}}/admin/users/{{userId}}/activate
+Authorization: Bearer {{accessToken}}
+
+### Delete Message (Moderation)
+DELETE {{adminService}}/admin/messages/{{messageId}}
+Authorization: Bearer {{accessToken}}
+
+### Get Audit Log
+GET {{adminService}}/admin/audit-log?limit=100&offset=0
+Authorization: Bearer {{accessToken}}
+
+### Get Audit Log by Action
+GET {{adminService}}/admin/audit-log?action_type=user_suspended&limit=50
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+# PRESENCE SERVICE
+################################################################################
+
+### Set Status to Online
+POST {{presenceService}}/presence/online
+Authorization: Bearer {{accessToken}}
+
+### Set Status to Offline
+POST {{presenceService}}/presence/offline
+Authorization: Bearer {{accessToken}}
+
+### Get User Presence
+GET {{presenceService}}/presence/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+### Start Typing Indicator
+POST {{presenceService}}/typing/start
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "channel_id": "{{channelId}}"
+}
+
+### Stop Typing Indicator
+POST {{presenceService}}/typing/stop
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "channel_id": "{{channelId}}"
+}
+
+################################################################################
+# GATEWAY SERVICE (WebSocket - Use separate WebSocket client)
+################################################################################
+
+### Health Check
+GET {{gatewayService}}/health
+
+### Note: WebSocket connection at ws://localhost:8007/ws
+### Use a WebSocket client to connect and test real-time features
+
+################################################################################
+# INTEGRATION TESTS
+################################################################################
+
+### Complete User Flow: Create User -> Channel -> Message -> React
+# This demonstrates the full user journey
+
+### 1. Create user (already done above)
+### 2. Create channel (already done above)
+### 3. Add user to channel (already done above)
+### 4. Send message (already done above)
+### 5. Add reaction (already done above)
+### 6. Create thread (already done above)
+
+### End of API Collection

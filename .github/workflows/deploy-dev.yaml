@@ -1,0 +1,84 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  K8S_NAMESPACE: colink-dev
+  ENVIRONMENT: development
+
+jobs:
+  deploy:
+    name: Deploy to Dev Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.colink.io
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name colink-dev-cluster \
+            --region us-east-1
+
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Update image tags
+        working-directory: infra/k8s/overlays/dev
+        run: |
+          kustomize edit set image \
+            colink/users-service=ghcr.io/${{ github.repository_owner }}/colink-users:${{ github.sha }} \
+            colink/messaging-service=ghcr.io/${{ github.repository_owner }}/colink-messaging:${{ github.sha }} \
+            colink/files-service=ghcr.io/${{ github.repository_owner }}/colink-files:${{ github.sha }} \
+            colink/search-service=ghcr.io/${{ github.repository_owner }}/colink-search:${{ github.sha }} \
+            colink/admin-service=ghcr.io/${{ github.repository_owner }}/colink-admin:${{ github.sha }} \
+            colink/channels-service=ghcr.io/${{ github.repository_owner }}/colink-channels:${{ github.sha }} \
+            colink/gateway-service=ghcr.io/${{ github.repository_owner }}/colink-gateway:${{ github.sha }} \
+            colink/presence-service=ghcr.io/${{ github.repository_owner }}/colink-presence:${{ github.sha }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          kustomize build infra/k8s/overlays/dev | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/dev-users-service -n ${{ env.K8S_NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/dev-messaging-service -n ${{ env.K8S_NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/dev-gateway-service -n ${{ env.K8S_NAMESPACE }} --timeout=5m
+
+      - name: Run smoke tests
+        run: |
+          # Wait for services to be ready
+          sleep 30
+
+          # Test health endpoints
+          kubectl run curl-test --image=curlimages/curl:latest --rm -i --restart=Never -n ${{ env.K8S_NAMESPACE }} -- \
+            curl -f http://dev-users-service:8001/health || exit 1
+
+          echo "Smoke tests passed"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "Deployment to dev successful"
+          else
+            echo "Deployment to dev failed"
+            exit 1
+          fi

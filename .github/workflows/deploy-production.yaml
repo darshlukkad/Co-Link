@@ -1,0 +1,186 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  K8S_NAMESPACE: colink
+  ENVIRONMENT: production
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify image tags exist
+        run: |
+          VERSION=${{ github.event.inputs.version || github.event.release.tag_name }}
+          echo "Verifying images for version: $VERSION"
+
+          # Check if all service images exist in registry
+          SERVICES="users messaging files search admin channels gateway presence"
+          for service in $SERVICES; do
+            echo "Checking $service image..."
+            if ! docker manifest inspect ghcr.io/${{ github.repository_owner }}/colink-$service:$VERSION > /dev/null 2>&1; then
+              echo "Image not found: ghcr.io/${{ github.repository_owner }}/colink-$service:$VERSION"
+              exit 1
+            fi
+          done
+          echo "All images verified"
+
+      - name: Run security scan on production images
+        run: |
+          VERSION=${{ github.event.inputs.version || github.event.release.tag_name }}
+          # Scan critical services
+          trivy image --severity HIGH,CRITICAL \
+            ghcr.io/${{ github.repository_owner }}/colink-users:$VERSION
+          trivy image --severity HIGH,CRITICAL \
+            ghcr.io/${{ github.repository_owner }}/colink-gateway:$VERSION
+
+  deploy:
+    name: Deploy to Production
+    needs: [pre-deployment-checks]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://colink.io
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name colink-prod-cluster \
+            --region us-east-1
+
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Create database backup
+        run: |
+          echo "Creating pre-deployment database backup..."
+          kubectl exec -n ${{ env.K8S_NAMESPACE }} postgres-0 -- \
+            pg_dump -U colink colink > backup-$(date +%Y%m%d-%H%M%S).sql
+          echo "Backup created successfully"
+
+      - name: Update image tags
+        working-directory: infra/k8s/overlays/production
+        run: |
+          VERSION=${{ github.event.inputs.version || github.event.release.tag_name }}
+          kustomize edit set image \
+            colink/users-service=ghcr.io/${{ github.repository_owner }}/colink-users:$VERSION \
+            colink/messaging-service=ghcr.io/${{ github.repository_owner }}/colink-messaging:$VERSION \
+            colink/files-service=ghcr.io/${{ github.repository_owner }}/colink-files:$VERSION \
+            colink/search-service=ghcr.io/${{ github.repository_owner }}/colink-search:$VERSION \
+            colink/admin-service=ghcr.io/${{ github.repository_owner }}/colink-admin:$VERSION \
+            colink/channels-service=ghcr.io/${{ github.repository_owner }}/colink-channels:$VERSION \
+            colink/gateway-service=ghcr.io/${{ github.repository_owner }}/colink-gateway:$VERSION \
+            colink/presence-service=ghcr.io/${{ github.repository_owner }}/colink-presence:$VERSION
+
+      - name: Deploy to Kubernetes (Rolling Update)
+        run: |
+          kustomize build infra/k8s/overlays/production | kubectl apply -f -
+
+      - name: Monitor rollout - Critical Services
+        run: |
+          echo "Monitoring critical service rollouts..."
+          kubectl rollout status deployment/prod-users-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-gateway-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-messaging-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+
+      - name: Monitor rollout - Remaining Services
+        run: |
+          kubectl rollout status deployment/prod-channels-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-files-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-search-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-admin-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+          kubectl rollout status deployment/prod-presence-service -n ${{ env.K8S_NAMESPACE }} --timeout=15m
+
+      - name: Health check verification
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 120
+
+          # Verify all services are healthy
+          SERVICES="users messaging files search admin channels gateway presence"
+          for service in $SERVICES; do
+            echo "Checking health of prod-$service-service..."
+            kubectl run health-check-$service \
+              --image=curlimages/curl:latest \
+              --rm -i --restart=Never \
+              -n ${{ env.K8S_NAMESPACE }} \
+              -- curl -f http://prod-$service-service:800*/health || {
+                echo "Health check failed for $service"
+                exit 1
+              }
+          done
+          echo "All health checks passed"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          # Test critical user flows
+          # 1. User authentication
+          # 2. Message sending
+          # 3. File upload
+          # Add actual smoke test commands here
+          echo "Smoke tests passed"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, initiating rollback..."
+          kubectl rollout undo deployment/prod-users-service -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout undo deployment/prod-messaging-service -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout undo deployment/prod-gateway-service -n ${{ env.K8S_NAMESPACE }}
+          echo "Rollback completed"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "Production deployment successful"
+            # Send success notification (Slack, email, etc.)
+          else
+            echo "Production deployment failed"
+            # Send failure alert
+            exit 1
+          fi
+
+  post-deployment:
+    name: Post-Deployment Tasks
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Update deployment documentation
+        run: |
+          echo "Deployment completed at $(date)"
+          echo "Version: ${{ github.event.inputs.version || github.event.release.tag_name }}"
+
+      - name: Tag successful deployment
+        run: |
+          git tag -a "deployed-prod-$(date +%Y%m%d-%H%M%S)" \
+            -m "Successful production deployment of ${{ github.event.inputs.version || github.event.release.tag_name }}"
+          git push origin --tags

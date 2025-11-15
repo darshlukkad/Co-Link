@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: colink-dev
+
+bases:
+  - ../../base
+
+namePrefix: dev-
+
+commonLabels:
+  environment: development
+  app.kubernetes.io/environment: dev
+
+# Patch for development-specific configurations
+patchesStrategicMerge:
+  - replicas-patch.yaml
+  - resources-patch.yaml
+
+configMapGenerator:
+  - name: colink-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+# Development uses smaller replicas
+replicas:
+  - name: users-service
+    count: 1
+  - name: messaging-service
+    count: 1
+  - name: files-service
+    count: 1
+  - name: search-service
+    count: 1
+  - name: admin-service
+    count: 1
+  - name: channels-service
+    count: 1
+  - name: gateway-service
+    count: 1
+  - name: presence-service
+    count: 1

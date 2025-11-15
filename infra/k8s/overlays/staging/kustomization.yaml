@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: colink-staging
+
+bases:
+  - ../../base
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+  app.kubernetes.io/environment: staging
+
+configMapGenerator:
+  - name: colink-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=staging
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+
+# Staging uses moderate replicas (2 for most services)
+replicas:
+  - name: users-service
+    count: 2
+  - name: messaging-service
+    count: 2
+  - name: files-service
+    count: 2
+  - name: search-service
+    count: 2
+  - name: admin-service
+    count: 2
+  - name: channels-service
+    count: 2
+  - name: gateway-service
+    count: 2
+  - name: presence-service
+    count: 2

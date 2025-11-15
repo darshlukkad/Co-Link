@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: colink
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - mongodb.yaml
+  - redis.yaml
+  - kafka.yaml
+  - users-service.yaml
+  - messaging-service.yaml
+  - files-service.yaml
+  - search-service.yaml
+  - admin-service.yaml
+  - channels-service.yaml
+  - gateway-service.yaml
+  - presence-service.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: colink
+  app.kubernetes.io/version: "1.0.0"

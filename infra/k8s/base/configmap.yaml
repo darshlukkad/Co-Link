@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: colink-config
+  namespace: colink
+data:
+  # Database
+  POSTGRES_HOST: postgres-service
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: colink
+  MONGODB_HOST: mongodb-service
+  MONGODB_PORT: "27017"
+  REDIS_HOST: redis-service
+  REDIS_PORT: "6379"
+
+  # Kafka
+  KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
+
+  # Keycloak
+  KEYCLOAK_URL: http://keycloak-service:8080
+  KEYCLOAK_REALM: colink
+
+  # Service URLs (internal)
+  USERS_SERVICE_URL: http://users-service:8001
+  MESSAGING_SERVICE_URL: http://messaging-service:8002
+  FILES_SERVICE_URL: http://files-service:8003
+  SEARCH_SERVICE_URL: http://search-service:8004
+  ADMIN_SERVICE_URL: http://admin-service:8005
+  CHANNELS_SERVICE_URL: http://channels-service:8006
+
+  # CORS
+  CORS_ORIGINS: https://app.colink.io,https://www.colink.io
+
+  # Environment
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO

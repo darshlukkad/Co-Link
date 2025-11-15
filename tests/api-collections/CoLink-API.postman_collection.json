@@ -1,0 +1,730 @@
+{
+  "info": {
+    "name": "CoLink API Collection",
+    "description": "Comprehensive API testing collection for CoLink platform microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "users_service",
+      "value": "http://localhost:8001",
+      "type": "string"
+    },
+    {
+      "key": "messaging_service",
+      "value": "http://localhost:8002",
+      "type": "string"
+    },
+    {
+      "key": "files_service",
+      "value": "http://localhost:8003",
+      "type": "string"
+    },
+    {
+      "key": "search_service",
+      "value": "http://localhost:8004",
+      "type": "string"
+    },
+    {
+      "key": "admin_service",
+      "value": "http://localhost:8005",
+      "type": "string"
+    },
+    {
+      "key": "channels_service",
+      "value": "http://localhost:8006",
+      "type": "string"
+    },
+    {
+      "key": "gateway_service",
+      "value": "http://localhost:8007",
+      "type": "string"
+    },
+    {
+      "key": "presence_service",
+      "value": "http://localhost:8008",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workspace_id",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    },
+    {
+      "key": "channel_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "message_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "file_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Get Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('access_token');",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "testuser@colink.io",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                },
+                {
+                  "key": "client_id",
+                  "value": "colink-api",
+                  "type": "text"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "colink-api-secret",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/realms/colink/protocol/openid-connect/token",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["realms", "colink", "protocol", "openid-connect", "token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{users_service}}/health",
+              "host": ["{{users_service}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"User created with ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user_id');",
+                  "    pm.collectionVariables.set('user_id', jsonData.user_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@colink.io\",\n  \"username\": \"newuser\",\n  \"display_name\": \"New User\",\n  \"password\": \"SecurePass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{users_service}}/users",
+              "host": ["{{users_service}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{users_service}}/users/{{user_id}}",
+              "host": ["{{users_service}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Updated Name\",\n  \"bio\": \"Software engineer\",\n  \"timezone\": \"America/New_York\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{users_service}}/users/{{user_id}}",
+              "host": ["{{users_service}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Channels Service",
+      "item": [
+        {
+          "name": "Create Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Channel created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('channel_id');",
+                  "    pm.collectionVariables.set('channel_id', jsonData.channel_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"name\": \"general\",\n  \"description\": \"General discussion channel\",\n  \"is_private\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{channels_service}}/channels",
+              "host": ["{{channels_service}}"],
+              "path": ["channels"]
+            }
+          }
+        },
+        {
+          "name": "List Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{channels_service}}/channels?workspace_id={{workspace_id}}",
+              "host": ["{{channels_service}}"],
+              "path": ["channels"],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Member to Channel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"role\": \"member\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{channels_service}}/channels/{{channel_id}}/members",
+              "host": ["{{channels_service}}"],
+              "path": ["channels", "{{channel_id}}", "members"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messaging Service",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Message sent\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message_id');",
+                  "    pm.collectionVariables.set('message_id', jsonData.message_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello, this is a test message!\",\n  \"message_type\": \"text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{messaging_service}}/channels/{{channel_id}}/messages",
+              "host": ["{{messaging_service}}"],
+              "path": ["channels", "{{channel_id}}", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Get Channel Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{messaging_service}}/channels/{{channel_id}}/messages?limit=50&offset=0",
+              "host": ["{{messaging_service}}"],
+              "path": ["channels", "{{channel_id}}", "messages"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Reaction",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emoji\": \"👍\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{messaging_service}}/messages/{{message_id}}/reactions",
+              "host": ["{{messaging_service}}"],
+              "path": ["messages", "{{message_id}}", "reactions"]
+            }
+          }
+        },
+        {
+          "name": "Create Thread Reply",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"This is a thread reply\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{messaging_service}}/messages/{{message_id}}/threads",
+              "host": ["{{messaging_service}}"],
+              "path": ["messages", "{{message_id}}", "threads"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files Service",
+      "item": [
+        {
+          "name": "Get Upload URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Upload URL received\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('file_id');",
+                  "    pm.expect(jsonData).to.have.property('upload_url');",
+                  "    pm.collectionVariables.set('file_id', jsonData.file_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"document.pdf\",\n  \"content_type\": \"application/pdf\",\n  \"size_bytes\": 1024000,\n  \"workspace_id\": \"{{workspace_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{files_service}}/files/upload-url",
+              "host": ["{{files_service}}"],
+              "path": ["files", "upload-url"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{files_service}}/files/{{file_id}}/confirm",
+              "host": ["{{files_service}}"],
+              "path": ["files", "{{file_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "Get Download URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{files_service}}/files/{{file_id}}/download-url",
+              "host": ["{{files_service}}"],
+              "path": ["files", "{{file_id}}", "download-url"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search Service",
+      "item": [
+        {
+          "name": "Search Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{search_service}}/search/messages?query=test&workspace_id={{workspace_id}}&limit=20",
+              "host": ["{{search_service}}"],
+              "path": ["search", "messages"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "test"
+                },
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{search_service}}/search/files?query=document&workspace_id={{workspace_id}}",
+              "host": ["{{search_service}}"],
+              "path": ["search", "files"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "document"
+                },
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unified Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{search_service}}/search?query=test&workspace_id={{workspace_id}}",
+              "host": ["{{search_service}}"],
+              "path": ["search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "test"
+                },
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Service",
+      "item": [
+        {
+          "name": "List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{admin_service}}/admin/users?limit=50&offset=0",
+              "host": ["{{admin_service}}"],
+              "path": ["admin", "users"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspend User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Policy violation\",\n  \"duration_hours\": 24\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_service}}/admin/users/{{user_id}}/suspend",
+              "host": ["{{admin_service}}"],
+              "path": ["admin", "users", "{{user_id}}", "suspend"]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{admin_service}}/admin/audit-log?limit=100",
+              "host": ["{{admin_service}}"],
+              "path": ["admin", "audit-log"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Presence Service",
+      "item": [
+        {
+          "name": "Set Online",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{presence_service}}/presence/online",
+              "host": ["{{presence_service}}"],
+              "path": ["presence", "online"]
+            }
+          }
+        },
+        {
+          "name": "Get Presence Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{presence_service}}/presence/{{user_id}}",
+              "host": ["{{presence_service}}"],
+              "path": ["presence", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Start Typing",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel_id\": \"{{channel_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{presence_service}}/typing/start",
+              "host": ["{{presence_service}}"],
+              "path": ["typing", "start"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
