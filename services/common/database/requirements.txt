@@ -11,5 +11,8 @@ pymongo>=4.6.0
 # Redis
 redis[hiredis]>=5.0.1
 
+# Kafka
+aiokafka>=0.10.0
+
 # Connection pooling
 greenlet>=3.0.0
