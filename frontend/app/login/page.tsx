@@ -33,14 +33,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
+      <div className="w-full max-w-md animate-fadeIn">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900">CoLink</h1>
-          <p className="mt-2 text-gray-600">Sign in to your workspace</p>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-slack-purple shadow-lg">
+            <span className="text-3xl font-bold text-white">C</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">CoLink</h1>
+          <p className="mt-2 text-sm md:text-base text-gray-600">Sign in to your workspace</p>
         </div>
 
-        <div className="rounded-lg bg-white p-8 shadow-sm">
+        <div className="rounded-lg bg-white p-6 md:p-8 shadow-lg">
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
               label="Email"
@@ -122,7 +125,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <a href="/signup" className="font-medium text-[#007a5a] hover:text-[#006644]">
+            <a href="/signup" className="font-medium text-slack-green hover:text-slack-green-dark transition-colors">
               Create one
             </a>
           </p>

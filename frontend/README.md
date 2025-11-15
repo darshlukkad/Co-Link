@@ -225,11 +225,12 @@ docker run -p 3000:3000 colink-frontend
 
 ## Development Roadmap
 
+- [x] Mobile responsiveness improvements
+- [x] Loading skeletons and error boundaries
 - [ ] Rich text editor (Tiptap)
 - [ ] File preview (images, PDFs, videos)
 - [ ] Voice/video calling (WebRTC)
 - [ ] Notifications (browser + push)
-- [ ] Mobile responsiveness improvements
 - [ ] Dark mode
 - [ ] Custom emojis
 - [ ] Message scheduling

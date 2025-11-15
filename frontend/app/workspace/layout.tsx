@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiClient } from '@/lib/api-client'
 import { wsClient } from '@/lib/websocket-client'
@@ -14,6 +15,7 @@ export default function WorkspaceLayout({
 }) {
   const router = useRouter()
   const { user, isAuthenticated, isLoading, setUser } = useAuthStore()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,8 +47,8 @@ export default function WorkspaceLayout({
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-[#007a5a] mx-auto" />
-          <p className="text-gray-600">Loading...</p>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-slack-green mx-auto" />
+          <p className="text-gray-600">Loading CoLink...</p>
         </div>
       </div>
     )
@@ -54,7 +56,35 @@ export default function WorkspaceLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
-      <Sidebar />
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="fixed top-4 left-4 z-50 rounded-lg bg-slack-purple p-2 text-white shadow-lg md:hidden"
+        aria-label="Toggle menu"
+      >
+        {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      </button>
+
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`
+          fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
+          md:relative md:translate-x-0
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <Sidebar onNavigate={() => setIsSidebarOpen(false)} />
+      </div>
+
+      {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {children}
       </div>

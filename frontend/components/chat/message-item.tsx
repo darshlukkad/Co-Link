@@ -45,7 +45,7 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
 
   return (
     <div
-      className="group relative px-5 py-2 hover:bg-gray-50"
+      className="group relative px-3 py-2 md:px-5 hover:bg-gray-50 transition-colors animate-fadeIn"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => {
         setShowActions(false)
@@ -90,10 +90,10 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
                 <button
                   key={emoji}
                   onClick={() => onReact(emoji)}
-                  className="inline-flex items-center space-x-1 rounded-full border border-[#007a5a] bg-blue-50 px-2 py-0.5 text-sm hover:bg-blue-100"
+                  className="inline-flex items-center space-x-1 rounded-full border border-slack-green bg-blue-50 px-2 py-0.5 text-sm hover:bg-blue-100 transition-colors"
                 >
                   <span>{emoji}</span>
-                  <span className="text-xs font-medium text-[#007a5a]">{count}</span>
+                  <span className="text-xs font-medium text-slack-green">{count}</span>
                 </button>
               ))}
             </div>
@@ -103,7 +103,7 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
           {message.thread_reply_count && message.thread_reply_count > 0 && (
             <button
               onClick={onReply}
-              className="mt-1 inline-flex items-center space-x-1 text-sm text-[#007a5a] hover:underline"
+              className="mt-1 inline-flex items-center space-x-1 text-sm text-slack-green hover:underline"
             >
               <MessageSquare className="h-4 w-4" />
               <span>{message.thread_reply_count} {message.thread_reply_count === 1 ? 'reply' : 'replies'}</span>
@@ -114,36 +114,36 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
 
       {/* Message Actions */}
       {showActions && (
-        <div className="absolute right-4 top-2 flex items-center space-x-0.5 rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="absolute right-3 md:right-4 top-2 flex items-center space-x-0.5 rounded-lg border border-gray-200 bg-white shadow-md animate-scale-in">
           <button
             onClick={() => setShowReactions(!showReactions)}
-            className="rounded p-1.5 hover:bg-gray-100"
+            className="rounded p-1.5 hover:bg-gray-100 transition-colors"
             title="Add reaction"
           >
             <Smile className="h-4 w-4 text-gray-600" />
           </button>
           <button
             onClick={onReply}
-            className="rounded p-1.5 hover:bg-gray-100"
+            className="rounded p-1.5 hover:bg-gray-100 transition-colors"
             title="Reply in thread"
           >
             <MessageSquare className="h-4 w-4 text-gray-600" />
           </button>
           <button
             onClick={onEdit}
-            className="rounded p-1.5 hover:bg-gray-100"
+            className="hidden sm:block rounded p-1.5 hover:bg-gray-100 transition-colors"
             title="Edit message"
           >
             <Pencil className="h-4 w-4 text-gray-600" />
           </button>
           <button
             onClick={onDelete}
-            className="rounded p-1.5 hover:bg-gray-100"
+            className="hidden sm:block rounded p-1.5 hover:bg-gray-100 transition-colors"
             title="Delete message"
           >
             <Trash2 className="h-4 w-4 text-gray-600" />
           </button>
-          <button className="rounded p-1.5 hover:bg-gray-100" title="More actions">
+          <button className="rounded p-1.5 hover:bg-gray-100 transition-colors" title="More actions">
             <MoreHorizontal className="h-4 w-4 text-gray-600" />
           </button>
         </div>
@@ -151,7 +151,7 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
 
       {/* Quick Reactions Picker */}
       {showReactions && (
-        <div className="absolute right-4 top-12 z-10 flex items-center space-x-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+        <div className="absolute right-3 md:right-4 top-12 z-10 flex items-center space-x-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg animate-scale-in">
           {quickEmojis.map((emoji) => (
             <button
               key={emoji}
@@ -159,7 +159,7 @@ export function MessageItem({ message, onReact, onReply, onEdit, onDelete }: Mes
                 onReact(emoji)
                 setShowReactions(false)
               }}
-              className="rounded p-1 text-xl hover:bg-gray-100"
+              className="rounded p-1 text-xl hover:bg-gray-100 transition-colors"
             >
               {emoji}
             </button>

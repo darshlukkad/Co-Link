@@ -10,7 +10,11 @@ import { CreateChannelModal } from '@/components/modals/create-channel-modal'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
-export default function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void
+}
+
+export default function Sidebar({ onNavigate }: SidebarProps = {}) {
   const router = useRouter()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
@@ -66,17 +70,22 @@ export default function Sidebar() {
 
   if (!user) return null
 
+  const handleNavigation = (action: () => void) => {
+    action()
+    onNavigate?.()
+  }
+
   return (
     <>
-      <div className="flex h-full w-64 flex-col bg-[#3f0e40] text-white">
+      <div className="flex h-full w-64 flex-col bg-slack-purple text-white shadow-2xl">
         {/* Workspace Header */}
-        <button className="flex items-center justify-between border-b border-[#522653] px-4 py-3 text-left hover:bg-[#350d36]">
+        <button className="flex items-center justify-between border-b border-slack-purple-border px-4 py-3 text-left hover:bg-slack-purple-dark transition-colors">
           <div className="flex items-center space-x-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded bg-white text-[#3f0e40] font-bold text-lg">
+            <div className="flex h-9 w-9 items-center justify-center rounded bg-white text-slack-purple font-bold text-lg shadow-sm">
               C
             </div>
             <div>
-              <h2 className="font-bold">CoLink Workspace</h2>
+              <h2 className="font-bold text-base">CoLink Workspace</h2>
             </div>
           </div>
           <ChevronDown className="h-4 w-4" />
@@ -85,7 +94,7 @@ export default function Sidebar() {
         {/* Sidebar Content */}
         <div className="flex-1 overflow-y-auto">
           {/* Threads, DMs, etc. */}
-          <div className="border-b border-[#522653] px-3 py-2">
+          <div className="border-b border-slack-purple-border px-3 py-2">
             <SidebarItem icon={MessageSquare} label="Threads" active={false} onClick={() => {}} />
             <SidebarItem icon={MessageSquare} label="All DMs" active={false} onClick={() => {}} />
           </div>
@@ -94,7 +103,7 @@ export default function Sidebar() {
           <div className="px-3 py-2">
             <button
               onClick={() => setIsChannelsOpen(!isChannelsOpen)}
-              className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-sm hover:bg-[#350d36]"
+              className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-sm hover:bg-slack-purple-dark transition-colors"
             >
               <span className="font-semibold">Channels</span>
               <button
@@ -102,7 +111,7 @@ export default function Sidebar() {
                   e.stopPropagation()
                   setIsCreateChannelOpen(true)
                 }}
-                className="rounded p-0.5 hover:bg-[#1a1d20]"
+                className="rounded p-0.5 hover:bg-slack-purple-darker transition-colors"
                 title="Create channel"
               >
                 <Plus className="h-4 w-4" />
@@ -113,10 +122,10 @@ export default function Sidebar() {
                 {channels.map((channel) => (
                   <button
                     key={channel.channel_id}
-                    onClick={() => setActiveChannel(channel.channel_id)}
+                    onClick={() => handleNavigation(() => setActiveChannel(channel.channel_id))}
                     className={cn(
-                      'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-[#350d36]',
-                      activeChannelId === channel.channel_id && 'bg-[#1164a3] text-white'
+                      'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-slack-purple-dark transition-colors',
+                      activeChannelId === channel.channel_id && 'bg-slack-blue text-white font-semibold'
                     )}
                   >
                     {channel.is_private ? (
@@ -140,7 +149,7 @@ export default function Sidebar() {
           <div className="px-3 py-2">
             <button
               onClick={() => setIsDMsOpen(!isDMsOpen)}
-              className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-sm hover:bg-[#350d36]"
+              className="mb-1 flex w-full items-center justify-between rounded px-2 py-1 text-sm hover:bg-slack-purple-dark transition-colors"
             >
               <span className="font-semibold">Direct messages</span>
               <Plus className="h-4 w-4" />
@@ -154,10 +163,10 @@ export default function Sidebar() {
                   return (
                     <button
                       key={dm.dm_id}
-                      onClick={() => setActiveDM(dm.dm_id)}
+                      onClick={() => handleNavigation(() => setActiveDM(dm.dm_id))}
                       className={cn(
-                        'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-[#350d36]',
-                        activeDMId === dm.dm_id && 'bg-[#1164a3] text-white'
+                        'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-slack-purple-dark transition-colors',
+                        activeDMId === dm.dm_id && 'bg-slack-blue text-white font-semibold'
                       )}
                     >
                       <Avatar
@@ -182,9 +191,9 @@ export default function Sidebar() {
         </div>
 
         {/* User Profile */}
-        <div className="border-t border-[#522653] p-2">
+        <div className="border-t border-slack-purple-border p-2">
           <div className="group relative">
-            <button className="flex w-full items-center space-x-2 rounded px-2 py-2 hover:bg-[#350d36]">
+            <button className="flex w-full items-center space-x-2 rounded px-2 py-2 hover:bg-slack-purple-dark transition-colors">
               <Avatar
                 src={user.avatar_url}
                 name={user.display_name}
@@ -233,8 +242,8 @@ function SidebarItem({ icon: Icon, label, active, onClick }: SidebarItemProps) {
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-[#350d36]',
-        active && 'bg-[#1164a3] text-white'
+        'flex w-full items-center space-x-2 rounded px-2 py-1 text-sm hover:bg-slack-purple-dark transition-colors',
+        active && 'bg-slack-blue text-white font-semibold'
       )}
     >
       <Icon className="h-4 w-4" />

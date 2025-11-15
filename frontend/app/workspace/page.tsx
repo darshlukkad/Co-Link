@@ -168,7 +168,7 @@ export default function WorkspacePage() {
         {/* Main Chat Area */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Channel Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+          <div className="flex items-center justify-between border-b border-gray-200 px-3 py-3 md:px-5 bg-white shadow-sm">
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 {activeChannel.is_private ? (
@@ -183,41 +183,41 @@ export default function WorkspacePage() {
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 md:space-x-2">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="rounded p-2 hover:bg-gray-100"
+                className="rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors"
                 title="Search (Cmd+K)"
               >
-                <Search className="h-5 w-5 text-gray-600" />
+                <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
               <button
                 onClick={() => setIsFileUploadOpen(true)}
-                className="rounded p-2 hover:bg-gray-100"
+                className="rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors"
                 title="Upload file"
               >
-                <Paperclip className="h-5 w-5 text-gray-600" />
+                <Paperclip className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
-              <button className="rounded p-2 hover:bg-gray-100" title="Start a call">
-                <Phone className="h-5 w-5 text-gray-600" />
+              <button className="hidden sm:block rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors" title="Start a call">
+                <Phone className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
-              <button className="rounded p-2 hover:bg-gray-100" title="Start a video call">
-                <Video className="h-5 w-5 text-gray-600" />
+              <button className="hidden sm:block rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors" title="Start a video call">
+                <Video className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
-              <button className="rounded p-2 hover:bg-gray-100" title="View members">
+              <button className="hidden md:block rounded p-2 hover:bg-gray-100 transition-colors" title="View members">
                 <Users className="h-5 w-5 text-gray-600" />
               </button>
-              <button className="rounded p-2 hover:bg-gray-100" title="Channel details">
-                <Info className="h-5 w-5 text-gray-600" />
+              <button className="rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors" title="Channel details">
+                <Info className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
             </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto bg-white">
             {isLoading ? (
               <div className="flex h-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-[#007a5a]" />
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-slack-green" />
               </div>
             ) : channelMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center px-5">
@@ -265,10 +265,12 @@ export default function WorkspacePage() {
 
         {/* Thread Panel (Right Sidebar) */}
         {threadMessageId && (
-          <ThreadPanel
-            messageId={threadMessageId}
-            onClose={() => setThread(null)}
-          />
+          <div className="hidden lg:block">
+            <ThreadPanel
+              messageId={threadMessageId}
+              onClose={() => setThread(null)}
+            />
+          </div>
         )}
       </div>
 
