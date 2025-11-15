@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Paperclip, Smile, AtSign, Bold, Italic, Strikethrough, Code } from 'lucide-react'
+import { Send, Paperclip, AtSign, Bold, Italic, Strikethrough, Code } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { EmojiPicker } from '@/components/ui/emoji-picker'
 
 interface MessageInputProps {
   channelName?: string
@@ -84,6 +85,23 @@ export function MessageInput({
     }
   }
 
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const newMessage = message.slice(0, start) + emoji + message.slice(end)
+
+    setMessage(newMessage)
+
+    // Set cursor position after emoji
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + emoji.length
+      textarea.focus()
+    }, 0)
+  }
+
   return (
     <div className="border-t border-gray-200 px-5 py-4">
       <form onSubmit={handleSubmit}>
@@ -131,13 +149,7 @@ export function MessageInput({
             >
               <Paperclip className="h-4 w-4 text-gray-600" />
             </button>
-            <button
-              type="button"
-              className="rounded p-1 hover:bg-gray-100"
-              title="Emoji"
-            >
-              <Smile className="h-4 w-4 text-gray-600" />
-            </button>
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
             <button
               type="button"
               className="rounded p-1 hover:bg-gray-100"
