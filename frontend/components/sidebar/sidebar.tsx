@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { apiClient } from '@/lib/api-client'
 import { Avatar } from '@/components/ui/avatar'
 import { CreateChannelModal } from '@/components/modals/create-channel-modal'
+import { WorkspaceSwitcher } from '@/components/sidebar/workspace-switcher'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
@@ -78,18 +79,16 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
   return (
     <>
       <div className="flex h-full w-64 flex-col bg-slack-purple text-white">
-        {/* Workspace Header */}
-        <button className="flex items-center justify-between border-b border-slack-purple-border px-4 py-3.5 text-left hover:bg-slack-purple-hover transition-all duration-100">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded bg-white text-slack-purple font-black text-lg">
-              C
-            </div>
-            <div>
-              <h2 className="font-black text-[15px] leading-tight">CoLink Workspace</h2>
-            </div>
-          </div>
-          <ChevronDown className="h-4 w-4 opacity-70" />
-        </button>
+        {/* Workspace Switcher */}
+        <WorkspaceSwitcher
+          currentWorkspace={{
+            id: WORKSPACE_ID,
+            name: 'CoLink Workspace',
+            icon: 'C'
+          }}
+          workspaces={[]}
+          onSignOut={handleLogout}
+        />
 
         {/* Sidebar Content */}
         <div className="flex-1 overflow-y-auto">
@@ -192,30 +191,19 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
 
         {/* User Profile */}
         <div className="border-t border-slack-purple-border p-3">
-          <div className="group relative">
-            <button className="flex w-full items-center gap-2 rounded px-2 py-1.5 hover:bg-slack-purple-hover transition-all duration-75">
-              <Avatar
-                src={user.avatar_url}
-                name={user.display_name}
-                userId={user.user_id}
-                size="md"
-                status="online"
-              />
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-[15px] font-bold truncate">{user.display_name}</p>
-                <p className="text-xs text-white/70 truncate">🟢 Active</p>
-              </div>
-            </button>
-
-            {/* Logout button on hover */}
-            <button
-              onClick={handleLogout}
-              className="absolute right-2 top-2 hidden rounded bg-slack-red p-1.5 text-white hover:bg-opacity-90 group-hover:block"
-              title="Logout"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button className="flex w-full items-center gap-2 rounded px-2 py-1.5 hover:bg-slack-purple-hover transition-all duration-75">
+            <Avatar
+              src={user.avatar_url}
+              name={user.display_name}
+              userId={user.user_id}
+              size="md"
+              status="online"
+            />
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-[15px] font-bold truncate">{user.display_name}</p>
+              <p className="text-xs text-white/70 truncate">🟢 Active</p>
+            </div>
+          </button>
         </div>
       </div>
 

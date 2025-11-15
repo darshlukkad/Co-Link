@@ -13,6 +13,10 @@ import { SearchModal } from '@/components/modals/search-modal'
 import { FileUploadModal } from '@/components/modals/file-upload-modal'
 import { ThreadPanel } from '@/components/chat/thread-panel'
 import { UserProfileModal } from '@/components/modals/user-profile-modal'
+import { ChannelInfoPanel } from '@/components/chat/channel-info-panel'
+import { TypingIndicator } from '@/components/chat/typing-indicator'
+import { KeyboardShortcutsModal } from '@/components/modals/keyboard-shortcuts-modal'
+import { MessageListSkeleton } from '@/components/chat/message-skeleton'
 import { cn } from '@/lib/utils'
 
 const WORKSPACE_ID = '550e8400-e29b-41d4-a716-446655440000'
@@ -24,26 +28,50 @@ export default function WorkspacePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Modal states
+  // Modal and panel states
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isChannelInfoOpen, setIsChannelInfoOpen] = useState(false)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
+
+  // Typing indicator state (mock data - would come from WebSocket in real app)
+  const [typingUsers, setTypingUsers] = useState<string[]>([])
 
   const activeChannel = channels.find((ch) => ch.channel_id === activeChannelId)
   const channelMessages = activeChannelId ? messages[activeChannelId] || [] : []
 
-  // Keyboard shortcut for search (Cmd+K / Ctrl+K)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K / Ctrl+K - Search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setIsSearchOpen(true)
+      }
+
+      // Cmd+/ / Ctrl+/ - Keyboard shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault()
+        setIsShortcutsOpen(true)
+      }
+
+      // Cmd+U / Ctrl+U - Upload file
+      if ((e.metaKey || e.ctrlKey) && e.key === 'u') {
+        e.preventDefault()
+        setIsFileUploadOpen(true)
+      }
+
+      // Cmd+. / Ctrl+. - Toggle channel info
+      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+        e.preventDefault()
+        setIsChannelInfoOpen(!isChannelInfoOpen)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [isChannelInfoOpen])
 
   useEffect(() => {
     if (activeChannelId) {
@@ -148,6 +176,57 @@ export default function WorkspacePage() {
     // Optionally send a message with the file attachment
   }
 
+  // Helper function to determine if messages should be grouped
+  const shouldGroupMessages = (current: any, previous: any) => {
+    if (!previous) return false
+    if (current.user_id !== previous.user_id) return false
+
+    const currentTime = new Date(current.created_at).getTime()
+    const previousTime = new Date(previous.created_at).getTime()
+    const timeDiff = currentTime - previousTime
+
+    // Group if within 5 minutes
+    return timeDiff < 5 * 60 * 1000
+  }
+
+  // Helper function to get date divider text
+  const getDateDividerText = (date: Date) => {
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const messageDate = new Date(date)
+    messageDate.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+    yesterday.setHours(0, 0, 0, 0)
+
+    if (messageDate.getTime() === today.getTime()) {
+      return 'Today'
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday'
+    } else {
+      return messageDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+  }
+
+  // Helper function to check if we need a date divider
+  const needsDateDivider = (current: any, previous: any) => {
+    if (!previous) return true
+
+    const currentDate = new Date(current.created_at)
+    const previousDate = new Date(previous.created_at)
+
+    currentDate.setHours(0, 0, 0, 0)
+    previousDate.setHours(0, 0, 0, 0)
+
+    return currentDate.getTime() !== previousDate.getTime()
+  }
+
   if (!activeChannel) {
     return (
       <div className="flex flex-1 items-center justify-center bg-gray-50">
@@ -207,7 +286,14 @@ export default function WorkspacePage() {
               <button className="hidden md:block rounded p-2 hover:bg-gray-100 transition-colors" title="View members">
                 <Users className="h-5 w-5 text-gray-600" />
               </button>
-              <button className="rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors" title="Channel details">
+              <button
+                onClick={() => setIsChannelInfoOpen(!isChannelInfoOpen)}
+                className={cn(
+                  "rounded p-1.5 md:p-2 hover:bg-gray-100 transition-colors",
+                  isChannelInfoOpen && "bg-gray-100"
+                )}
+                title="Channel details"
+              >
                 <Info className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               </button>
             </div>
@@ -216,8 +302,8 @@ export default function WorkspacePage() {
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto bg-white">
             {isLoading ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-slack-green" />
+              <div className="py-4">
+                <MessageListSkeleton count={8} />
               </div>
             ) : channelMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center px-5">
@@ -239,16 +325,30 @@ export default function WorkspacePage() {
               </div>
             ) : (
               <div className="py-4">
-                {channelMessages.map((message) => (
-                  <MessageItem
-                    key={message.message_id}
-                    message={message}
-                    onReact={(emoji) => handleReaction(message.message_id, emoji)}
-                    onReply={() => handleOpenThread(message.message_id)}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                  />
-                ))}
+                {channelMessages.map((message, index) => {
+                  const previousMessage = index > 0 ? channelMessages[index - 1] : null
+                  const isGrouped = shouldGroupMessages(message, previousMessage)
+                  const showDateDivider = needsDateDivider(message, previousMessage)
+                  const dateDividerText = showDateDivider
+                    ? getDateDividerText(new Date(message.created_at))
+                    : undefined
+
+                  return (
+                    <MessageItem
+                      key={message.message_id}
+                      message={message}
+                      onReact={(emoji) => handleReaction(message.message_id, emoji)}
+                      onReply={() => handleOpenThread(message.message_id)}
+                      onEdit={() => {}}
+                      onDelete={() => {}}
+                      isGrouped={isGrouped}
+                      showDateDivider={showDateDivider}
+                      dateDividerText={dateDividerText}
+                    />
+                  )
+                })}
+                {/* Typing Indicator */}
+                <TypingIndicator userNames={typingUsers} />
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -264,7 +364,7 @@ export default function WorkspacePage() {
         </div>
 
         {/* Thread Panel (Right Sidebar) */}
-        {threadMessageId && (
+        {threadMessageId && !isChannelInfoOpen && (
           <div className="hidden lg:block">
             <ThreadPanel
               messageId={threadMessageId}
@@ -272,7 +372,31 @@ export default function WorkspacePage() {
             />
           </div>
         )}
+
+        {/* Channel Info Panel (Right Sidebar) - Desktop */}
+        {isChannelInfoOpen && activeChannel && (
+          <div className="hidden lg:block">
+            <ChannelInfoPanel
+              channel={activeChannel}
+              onClose={() => setIsChannelInfoOpen(false)}
+              memberCount={0}
+              pinnedMessages={0}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Channel Info Panel - Mobile (Full Screen Overlay) */}
+      {isChannelInfoOpen && activeChannel && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-white">
+          <ChannelInfoPanel
+            channel={activeChannel}
+            onClose={() => setIsChannelInfoOpen(false)}
+            memberCount={0}
+            pinnedMessages={0}
+          />
+        </div>
+      )}
 
       {/* Modals */}
       <SearchModal
@@ -301,6 +425,11 @@ export default function WorkspacePage() {
           isCurrentUser={true}
         />
       )}
+
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
     </>
   )
 }

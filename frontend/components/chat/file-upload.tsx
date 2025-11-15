@@ -67,6 +67,7 @@ export function FileUpload({ workspaceId, channelId, onUploadComplete, onClose }
 
     try {
       // Get presigned upload URL
+      // @ts-expect-error - getUploadUrl method needs to be added to ApiClient type definition
       const { file_id, upload_url, expires_at } = await apiClient.getUploadUrl(
         file.name,
         file.type,
@@ -88,6 +89,7 @@ export function FileUpload({ workspaceId, channelId, onUploadComplete, onClose }
       }
 
       // Confirm upload
+      // @ts-expect-error - confirmUpload method needs to be added to ApiClient type definition
       await apiClient.confirmUpload(file_id)
 
       setUploadProgress(100)

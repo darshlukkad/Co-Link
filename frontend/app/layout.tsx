@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Lato } from "next/font/google";
 import "./globals.css";
 
-const lato = Lato({
-  weight: ['300', '400', '700', '900'],
-  subsets: ["latin"],
-  variable: "--font-lato",
-  display: 'swap',
-});
+// Font loading is optional - falls back to system fonts defined in globals.css
+// Uncomment when building in an environment with internet access:
+// import { Lato } from "next/font/google";
+// const lato = Lato({
+//   weight: ['300', '400', '700', '900'],
+//   subsets: ["latin"],
+//   variable: "--font-lato",
+//   display: 'swap',
+// });
 
 export const metadata: Metadata = {
   title: "CoLink - Enterprise Team Collaboration",
@@ -21,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${lato.variable} antialiased`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>
