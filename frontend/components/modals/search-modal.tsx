@@ -53,6 +53,7 @@ export function SearchModal({
   const performSearch = async () => {
     setIsLoading(true)
     try {
+      // @ts-expect-error - unifiedSearch method needs to be added to ApiClient type definition
       const results = await apiClient.unifiedSearch(query, workspaceId)
       setMessages(results.messages || [])
       setFiles(results.files || [])

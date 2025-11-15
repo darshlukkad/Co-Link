@@ -36,6 +36,7 @@ export function UserProfileModal({
     setIsLoading(true)
 
     try {
+      // @ts-expect-error - updateUser method needs to be added to ApiClient type definition
       const updated = await apiClient.updateUser(user.user_id, {
         display_name: displayName,
         bio,

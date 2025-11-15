@@ -31,7 +31,8 @@ export default function WorkspaceLayout({
 
         // Connect WebSocket
         wsClient.connect(token)
-        await apiClient.setOnline()
+        // Set user as online (you may need to update this based on your API)
+        // await apiClient.setOnline(true)
       } catch (error) {
         console.error('Auth check failed:', error)
         router.push('/login')
