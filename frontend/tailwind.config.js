@@ -9,14 +9,39 @@ module.exports = {
     extend: {
       colors: {
         slack: {
-          'purple': '#3f0e40',
-          'purple-dark': '#350d36',
-          'purple-darker': '#1a1d20',
-          'purple-border': '#522653',
+          // Sidebar colors (exact Slack purple)
+          'purple': '#4A154B',
+          'purple-dark': '#3E0E40',
+          'purple-darker': '#350D36',
+          'purple-border': '#682769',
+          'purple-hover': '#3E0E40',
+          'purple-active': '#1164A3',
+
+          // Accent colors
           'green': '#007a5a',
           'green-dark': '#005a42',
-          'blue': '#1164a3',
-          'blue-light': '#1264a3',
+          'blue': '#1264a3',
+          'blue-light': '#1f8bfa',
+          'red': '#e01e5a',
+
+          // UI colors
+          'gray': {
+            50: '#f8f8f8',
+            100: '#f0f0f0',
+            200: '#e0e0e0',
+            300: '#c7c7c7',
+            400: '#a0a0a0',
+            500: '#717171',
+            600: '#5c5c5c',
+            700: '#464646',
+            800: '#2e2e2e',
+            900: '#1a1a1a',
+          },
+
+          // Message colors
+          'message-hover': '#f8f8f8',
+          'message-highlight': '#fff4e0',
+          'border': '#e0e0e0',
         },
       },
       keyframes: {
